@@ -9,6 +9,8 @@ from unidecode import unidecode
 from datetime import datetime
 from urllib.parse import unquote as urllib_unquote
 
+# TODO: Speedtest-Ergebnisse mittels showText anzeigen damit man einfach durchscrollen kann
+
 locale.setlocale(locale.LC_ALL, "de_DE.utf8")
 
 DISPLAY_WIDTH = 16
@@ -21,7 +23,7 @@ BUTTON_RIGHT = 2
 PIN_RESET = 40 # 40 = GPIO 21 (SCLK)
 BUTTON_RESET = 1
 
-WAIT_SPLASH = 1
+WAIT_SPLASH = 3
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
@@ -222,7 +224,7 @@ def routine_speedtest():
     best_server = st.get_best_server()
     ping = "? ms"
     for key, value in best_server.items():
-        debug(key, ' : ', value)
+        debug(key + ' : ' + str(value))
         if key == "latency":
             ping = f'{value:.3f}'  + " ms"
     debug("MBit/s Download: "+mbit_download_string)
