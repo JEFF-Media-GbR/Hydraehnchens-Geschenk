@@ -23,8 +23,8 @@ BUTTON_RESET = 1
 
 WAIT_SPLASH = 1
 
-GPIO.setwarnings(False) # Ignore warning for now
-GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BOARD)
 GPIO.setup(PIN_LEFT, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(PIN_RIGHT, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(PIN_RESET, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -102,7 +102,7 @@ def waitForButton(button, clearDisplay):
     return False
         
 def mainMenu(start):
-    menu = ["Wikipedia","Uhr","Internet","Test3","Test4",""]
+    menu = ["WTF, Hilfe :o","Wikipedia","Uhr","Internet",""]
     lcd.print_line(">"+menu[start],0)
     lcd.print_line(" "+menu[start+1],1)
     button = waitGetButton()
@@ -124,6 +124,8 @@ def startRoutine(routine, start):
         routine_speedtest()
     elif routine == "Wikipedia":
         routine_wikipedia()
+    elif routine == "WTF, Hilfe :o":
+        routine_hilfe()
     mainMenu(start)
     
 def remove_non_ascii(text):
@@ -156,33 +158,17 @@ def routine_wikipedia():
     lcd.print_line("Artikel",0,"CENTER")
     lcd.print_line("verarbeiten ...",1,"CENTER")
     file = open("/tmp/wikipedia")
-    #article = textwrap.wrap(remove_non_ascii(file.read()),width=DISPLAY_WIDTH)
     article = file.read()
     debug(article)
     lcd.print_line("Fertig!",0)
     showText(article)
-    #show_wikipedia(article, 0)
-    
-#def show_wikipedia(article, start):
-#    if start < len(article):
-#        lcd.print_line(article[start],0)
-#    if start+1 < len(article):
-#        lcd.print_line(article[start+1],1)
-#    button = waitGetButton()
-#    if button == BUTTON_LEFT and start > 1:
-#        show_wikipedia(article,start-2)
-#    elif button == BUTTON_RIGHT and start < len(article)-3:
-#        show_wikipedia(article,start+2)
-#    elif button != BUTTON_RESET:
-#        print("quit Wikipedia")
+
     
 def routine_uhr():
     while waitForButton(BUTTON_RESET,True):
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
         current_date = now.strftime("%a %d. %b. %Y")
-        #print("Current Time = " + current_time)
-        #print("Current Date = " + current_date)
         lcd.print_line(current_time,0,"CENTER")
         lcd.print_line(current_date,1,"CENTER")
         time.sleep(0.01)
@@ -221,16 +207,17 @@ def startSpeedtestRoutine(routine, start, download, upload, ping):
             time.sleep(0.01)
         menu_speedtest(start,download,upload,ping)
         
+def routine_hilfe():
+    showText("Alles alles alles gute zum 25. Geburtstag, liebstes Hydrähnchen! <3 Dieses Gerät soll dir helfen, dein Wissen stetig zu erweitern, damit du, wenn du bald richtig alt bist, wenigstens nicht so blöd dastehst ^^ :*")
+        
 def routine_speedtest():
     debug("Speedtest... this can take a while")
     lcd.print_line("Teste Haehnchens",0,"CENTER");
     lcd.print_line("Internet ...",1,"CENTER")
     st = speedtest.Speedtest()
     mbit_download = st.download()*0.0000076294
-    #mbit_download = 123.45
     mbit_download_string = f'{mbit_download:.3f}' + " Mbit/s"
     mbit_upload = st.upload()*0.0000076294
-    #mbit_upload = 234.56
     mbit_upload_string = f'{mbit_upload:.3f}' + " Mbit/s"
     best_server = st.get_best_server()
     ping = "? ms"
@@ -244,9 +231,6 @@ def routine_speedtest():
     #while waitForButton(BUTTON_RESET,True):
     #    time.sleep(0.01)
         
-        
-#showText("eine zeile zweite zeile dritte zeile vierte zeile fuenfte zeile",0)
-showText("Herzlich willkommen zu Haehnchens Geraet, liebste Hydraehnchen! Mit links und rechts kannst du nach oben und unten scrollen und mit dem einsamen Knopf bestaetigen. 1234567",0)
     
 debug("Splash Start")
 lcd.print_line("Hydraehnchen's",0,"CENTER")
