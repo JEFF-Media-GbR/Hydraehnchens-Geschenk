@@ -32,6 +32,12 @@ GPIO.setup(PIN_RESET, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 lcd = i2clcd.i2clcd(i2c_bus=1, i2c_addr=0x27, lcd_width=DISPLAY_WIDTH)
 lcd.init()
 
+debugEnabled = True
+
+def debug(text):
+    if debugEnabled:
+        print("debug: "+text)
+        
 def getButton():
     result = 0
     if GPIO.input(PIN_LEFT) == GPIO.HIGH:
@@ -45,11 +51,14 @@ def getButton():
 def showText(text, start):
     textWrapped = textwrap.wrap(text,DISPLAY_WIDTH)
     if start < 0:
+        debug("start < 0")
         start = 0
     elif start > len(textWrapped)-DISPLAY_HEIGHT:
+        debug("start > len(textWrapped)-DISPLAY_HEIGHT")
         start = len(textWrapped)-DISPLAY_HEIGHT
     for i in range(0,DISPLAY_HEIGHT):
         if start+i < len(textWrapped):
+            debug("writing line "+str(i))
             lcd.print_line(textWrapped[start+i],i)
         else:
             lcd.print_line("^^^",i,"CENTER")
@@ -111,6 +120,13 @@ def startRoutine(routine, start):
     mainMenu(start)
     
 def remove_non_ascii(text):
+    text = text.replace("ü","ue")
+    text = text.replace("ä","ae")
+    text = text.replace("ö","oe")
+    text = text.replace("Ü","Ue")
+    text = text.replace("Ö","Oe")
+    text = text.replace("A","Ae")
+    text = text.replace("ß","ss")
     return unidecode(text)
     
 def remove_prefix(text, prefix):
@@ -219,6 +235,8 @@ def routine_speedtest():
     #while waitForButton(BUTTON_RESET,True):
     #    time.sleep(0.01)
         
+        
+showText("eine zeile zweite zeile dritte zeile vierte zeile fuenfte zeile",0)
 showText("Herzlich willkommen zu Haehnchens Geraet, liebste Hydraehnchen! Mit links und rechts kannst du nach oben und unten scrollen und mit dem einsamen Knopf bestaetigen. 1234567",0)
     
 print("Splash Start")
