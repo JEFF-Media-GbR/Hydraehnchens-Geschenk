@@ -11,6 +11,9 @@ from urllib.parse import unquote as urllib_unquote
 
 locale.setlocale(locale.LC_ALL, "de_DE.utf8")
 
+DISPLAY_WIDTH = 16
+DISPLAY_HEIGHT = 2
+
 PIN_LEFT = 10 # 10 = GPIO 15 (RXD)
 BUTTON_LEFT = 4
 PIN_RIGHT = 12 # 12 = GPIO 18 (PCM_C)
@@ -26,7 +29,7 @@ GPIO.setup(PIN_LEFT, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(PIN_RIGHT, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(PIN_RESET, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-lcd = i2clcd.i2clcd(i2c_bus=1, i2c_addr=0x27, lcd_width=16)
+lcd = i2clcd.i2clcd(i2c_bus=1, i2c_addr=0x27, lcd_width=DISPLAY_WIDTH)
 lcd.init()
 
 def getButton():
@@ -39,13 +42,25 @@ def getButton():
         result = result + BUTTON_RESET
     return result
     
-print("Splash Start")
-lcd.print_line("Hydraehnchen's",0,"CENTER")
-lcd.print_line("Geraet",1,"CENTER")
-time.sleep(WAIT_SPLASH)
-lcd.clear()
-print("Splash End")
-
+def showText(text, start):
+    textWrapped = textwrap.wrap(text,DISPLAY_WIDTH)
+    if start < 0:
+        start = 0
+    elif start > len(textWrapped)-DISPLAY_HEIGHT:
+        start = len(textWrapped)-DISPLAY_HEIGHT
+    for i in range(0,DISPLAY_HEIGHT):
+        if start+i < len(textWrapped):
+            lcd.print_line(textWrapped[start+i],i)
+        else:
+            lcd.print_line("^^^",i,"CENTER")
+    button = waitGetButton()
+    if button == BUTTON_RIGHT:
+        showText(text, start + DISPLAY_HEIGHT)
+    elif button == BUTTON_LEFT:
+        showText(text, start - DISPLAY_HEIGHT)
+    elif button != BUTTON_RESET:
+        showText(text, start)
+        
 def waitGetButton():
     while getButton() == 0:
         time.sleep(0.01)
@@ -118,7 +133,7 @@ def routine_wikipedia():
     lcd.print_line("Artikel",0,"CENTER")
     lcd.print_line("verarbeiten ...",1,"CENTER")
     file = open("/tmp/wikipedia")
-    article = textwrap.wrap(remove_non_ascii(file.read()),width=16)
+    article = textwrap.wrap(remove_non_ascii(file.read()),width=DISPLAY_WIDTH)
     print(article)
     lcd.print_line("Fertig!",0)
     show_wikipedia(article, 0)
@@ -204,28 +219,14 @@ def routine_speedtest():
     #while waitForButton(BUTTON_RESET,True):
     #    time.sleep(0.01)
         
+showText("Herzlich willkommen zu Haehnchens Geraet, liebste Hydraehnchen! Mit links und rechts kannst du nach oben und unten scrollen und mit dem einsamen Knopf bestaetigen. 1234567",0)
     
+print("Splash Start")
+lcd.print_line("Hydraehnchen's",0,"CENTER")
+lcd.print_line("Geraet",1,"CENTER")
+time.sleep(WAIT_SPLASH)
+lcd.clear()
+print("Splash End")
+
+
 mainMenu(0)
-
-while True: # Run forever
-    button = getButton()
-
-    if button == 0:
-        #print("...")
-        continue
-    if button == BUTTON_LEFT:
-        print("L")
-        lcd.print_line('left', line=0)
-    if button == BUTTON_RIGHT:
-        print("R")
-    if button == BUTTON_RESET:
-        print("Reset")
-    if button == BUTTON_LEFT + BUTTON_RIGHT:
-        print("L+R")
-    if button == BUTTON_LEFT + BUTTON_RESET:
-        print("L+Reset")
-    if button == BUTTON_RIGHT + BUTTON_RESET:
-        print("R+Reset")
-    if button == BUTTON_LEFT + BUTTON_RIGHT + BUTTON_RESET:
-        print("L+R+Reset")
-    time.sleep(0.1)
