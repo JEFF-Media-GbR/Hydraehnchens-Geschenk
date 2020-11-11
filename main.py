@@ -13,12 +13,12 @@ from unidecode import unidecode
 from datetime import datetime
 from urllib.parse import unquote as urllib_unquote
 
-# TODO: Speedtest-Ergebnisse mittels showText anzeigen damit man einfach durchscrollen kann
+# pip3 install RPi.GPIO i2clcd smbus speedtest-cli Unidecode
 
 locale.setlocale(locale.LC_ALL, "de_DE.utf8")
 
-DISPLAY_WIDTH = 16
-DISPLAY_HEIGHT = 2
+DISPLAY_WIDTH = 20
+DISPLAY_HEIGHT = 4
 
 PIN_LEFT = 10 # 10 = GPIO 15 (RXD)
 BUTTON_LEFT = 4
@@ -27,7 +27,7 @@ BUTTON_RIGHT = 2
 PIN_RESET = 40 # 40 = GPIO 21 (SCLK)
 BUTTON_RESET = 1
 
-WAIT_SPLASH = 1
+WAIT_SPLASH = 3
 
 NEWS_URL = "http://newsapi.org/v2/top-headlines?country=de&apiKey="
 NEWS_API_KEY = "53d27f03fe224162a43195aa7b208ba8"
@@ -42,7 +42,7 @@ lcd = i2clcd.i2clcd(i2c_bus=1, i2c_addr=0x27, lcd_width=DISPLAY_WIDTH)
 lcd.init()
 lcd.set_backlight(True)
 
-debugEnabled = False
+debugEnabled = True
 
 os.chdir("/home/pi/haehnchens-geraet/")
 
@@ -229,12 +229,14 @@ def menu_internet(start):
         mainMenu(0)
 
 def ip_anzeigen():
-    lcd.print_line("Teste Haehnchens",0,"CENTER");
-    lcd.print_line("IP-Adresse ...",1,"CENTER")
+    line(0)
+    lcd.print_line("Teste Haehnchens",1,"CENTER");
+    lcd.print_line("IP-Adresse ...",2,"CENTER")
+    line(3)
     localIP = subprocess.check_output(["hostname","-I"]).split()[0].decode()
     publicIP = subprocess.check_output(["curl","ifconfig.me"]).split()[0].decode()
-    lcd.print_line(localIP,0,"CENTER")
-    lcd.print_line(publicIP,1,"CENTER")
+    lcd.print_line(localIP,1,"CENTER")
+    lcd.print_line(publicIP,2,"CENTER")
     while waitForButton(BUTTON_RESET,True):
         time.sleep(0.01)
     menu_internet(0)
@@ -314,8 +316,10 @@ def routine_debug(start=0):
 
     
     elif chosen == "Beenden":
-        lcd.print_line("Knorken Knack,",0,"CENTER")
-        lcd.print_line("Haehnchen!",1,"CENTER")
+        line(0)
+        lcd.print_line("Knorken Knack,",1,"CENTER")
+        lcd.print_line("Haehnchen!",2,"CENTER")
+        line(3)
         time.sleep(3)
         lcd.clear()
         lcd.set_backlight(False)
@@ -326,21 +330,27 @@ def routine_debug(start=0):
         
         
 def routine_wikipedia():
-    lcd.print_line("Suche zufaelligen",0,"CENTER")
-    lcd.print_line("Artikel ...",1,"CENTER")
+    line(0)
+    lcd.print_line("Suche zufaelligen",1,"CENTER")
+    lcd.print_line("Artikel ...",2,"CENTER")
+    line(3)
     os.system("curl -Ls -o /dev/null -w %{url_effective} https://de.wikipedia.org/wiki/Spezial:Zuf%C3%A4llige_Seite > /tmp/wikipedialink")
     articleName = open("/tmp/wikipedialink").read()
     articleName = urllib_unquote(remove_prefix(articleName, "https://de.wikipedia.org/wiki/"))
     debug("Random article: " + articleName)
-    lcd.print_line("Artikel",0,"CENTER")
-    lcd.print_line("laden ...",1,"CENTER")
+    line(0)
+    lcd.print_line("Artikel",1,"CENTER")
+    lcd.print_line("laden ...",2,"CENTER")
+    line(3)
     showAll = "--all" if wikiShowAll else ""
     downloadCommand = "echo 'Artikel: "+articleName.replace("_"," ")+" "+drawLine("=")+"' > /tmp/wikipedia; wikit "+articleName+" -l de "+showAll+" >> /tmp/wikipedia"
     debug("DownloadCommand:")
     debug(downloadCommand)
     os.system(downloadCommand)
-    lcd.print_line("Artikel",0,"CENTER")
-    lcd.print_line("verarbeiten ...",1,"CENTER")
+    line(0)
+    lcd.print_line("Artikel",1,"CENTER")
+    lcd.print_line("verarbeiten ...",2,"CENTER")
+    line(3)
     file = open("/tmp/wikipedia")
     article = file.read()
     debug(article)
@@ -348,8 +358,10 @@ def routine_wikipedia():
     showText(article)
 
 def routine_nachrichten():
-    lcd.print_line("Lade unseri-",0,"CENTER")
-    lcd.print_line("oese News ...",1,"CENTER")
+    line(0)
+    lcd.print_line("Lade unserioese",1,"CENTER")
+    lcd.print_line("Nachrichten ...",2,"CENTER")
+    line(3)
     titles = ["Zurück"]
     shortTitles = ["Zurück"]
     descriptions = ["Zurück"]
@@ -376,13 +388,18 @@ def routine_nachrichten():
             finalContents.append(contents[i])
         else:
             finalContents[i] = "- Kein Inhalt Hähnchen :( -"
+    titles.append("Zurück")
+    shortTitles.append("Zurück")
+    descriptions.append("Zurück")
+    contents.append("Zurück")
+    finalContents.append("Zurück")
     menu_nachrichten(titles, shortTitles, finalContents, 0)
 
 def menu_nachrichten(titles, shortTitles, contents, start):
     chosen = showMenu(shortTitles, start, start, returnInt=True)
     debug("Article chosen: "+str(chosen))
-    if(chosen != 0 and chosen != len(titles)):
-        showText(titles[chosen] + " " + drawLine("=") + contents[chosen])
+    if(chosen != 0 and chosen != len(titles) and chosen != len(titles) -1 ):
+        showText(titles[chosen] + " =~=~=~=~=~=~=~=~=~= " + contents[chosen])
         menu_nachrichten(titles,shortTitles,contents,chosen)
     
 def routine_uhr():
@@ -390,18 +407,28 @@ def routine_uhr():
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
         current_date = now.strftime("%a %d. %b. %Y")
-        lcd.print_line(current_time,0,"CENTER")
-        lcd.print_line(current_date,1,"CENTER")
+        lcd.print_line(current_time,1,"CENTER")
+        lcd.print_line(current_date,2,"CENTER")
+        line(0)
+        line(3)
         time.sleep(0.01)
 
 def display_speedtest(download,upload,ping):
     text = [
+        getLine(),
         "    Download   >",
         download,
+        getLine(),
+        
+        getLine(),
         "<    Upload    >",
         upload,
+        getLine(),
+        
+        getLine(),
         "<     Ping      ",
-        ping
+        ping,
+        getLine()
         ]
     showTextRaw(text,0,"CENTER")
 
@@ -425,14 +452,20 @@ def menu_speedtest(start,download,upload,ping):
 def startSpeedtestRoutine(routine, start, download, upload, ping):
     waitNoButton(True)
     if routine == "Download":
-        lcd.print_line("< Download",0)
-        lcd.print_line(download,1)
+        line(0)
+        line(3)
+        lcd.print_line("< Download",1)
+        lcd.print_line(download,2)
     elif routine == "Upload":
-        lcd.print_line("< Upload",0)
-        lcd.print_line(upload,1)
+        line(0)
+        line(3)
+        lcd.print_line("< Upload",1)
+        lcd.print_line(upload,2)
     elif routine == "Ping":
-        lcd.print_line("< Ping",0)
-        lcd.print_line(ping,1)
+        line(0)
+        line(3)
+        lcd.print_line("< Ping",1)
+        lcd.print_line(ping,2)
     elif routine == "Zurueck":
         waitNoButton(True)
     if routine != "Zurueck":
@@ -445,8 +478,10 @@ def routine_hilfe():
         
 def routine_speedtest():
     debug("Speedtest... this can take a while")
-    lcd.print_line("Teste Haehnchens",0,"CENTER");
-    lcd.print_line("Internet ...",1,"CENTER")
+    line(0)
+    lcd.print_line("Teste Haehnchens",1,"CENTER");
+    lcd.print_line("Internet ...",2,"CENTER")
+    line(3)
     st = speedtest.Speedtest()
     mbit_download = st.download()*0.0000076294
     mbit_download_string = f'{mbit_download:.3f}' + " Mbit/s"
@@ -461,11 +496,21 @@ def routine_speedtest():
     debug("MBit/s Download: "+mbit_download_string)
     debug("MBit/s Upload: "+mbit_upload_string)
     display_speedtest(mbit_download_string,mbit_upload_string,ping)
+    
+def line(number):
+    lcd.print_line("~=~=~=~=~=~=~=~=~=~=",number)
+    
+def getLine():
+    return "~=~=~=~=~=~=~=~=~=~="
+    
         
     
 debug("Splash Start")
-lcd.print_line("Hydraehnchen's",0,"CENTER")
-lcd.print_line("Geraet",1,"CENTER")
+
+line(0)
+lcd.print_line("Hydraehnchen's",1,"CENTER")
+lcd.print_line("Geraet",2,"CENTER")
+line(3)
 time.sleep(WAIT_SPLASH)
 lcd.clear()
 debug("Splash End")
