@@ -12,6 +12,7 @@ import urllib.request, json
 from unidecode import unidecode
 from datetime import datetime
 from urllib.parse import unquote as urllib_unquote
+from urllib.request import urlopen
 
 # pip3 install RPi.GPIO i2clcd smbus speedtest-cli Unidecode
 
@@ -27,7 +28,7 @@ BUTTON_RIGHT = 2
 PIN_RESET = 40 # 40 = GPIO 21 (SCLK)
 BUTTON_RESET = 1
 
-WAIT_SPLASH = 3
+WAIT_SPLASH = 1
 
 NEWS_URL = "http://newsapi.org/v2/top-headlines?country=de&apiKey="
 NEWS_API_KEY = "53d27f03fe224162a43195aa7b208ba8"
@@ -84,12 +85,12 @@ def showMenu(entries, start = 0, selected = 0, align="LEFT", returnInt=False):
     debug("showMenu Stack: "+str(len(inspect.stack())))
 
     # Pre checks: Start and Selected nicht out of bounds
+    if start > len(entries)-DISPLAY_HEIGHT:
+        debug("correcting out of bound: start > len(entries)-DISPLAY_HEIGHT")
+        start = len(entries)-DISPLAY_HEIGHT
     if start < 0:
         debug("correcting out of bound: start < 0")
         start = 0
-    elif start > len(entries)-DISPLAY_HEIGHT:
-        debug("correcting out of bound: start > len(entries)-DISPLAY_HEIGHT")
-        start = len(entries)-DISPLAY_HEIGHT
 
     if selected < 0:
         debug("correcting out of bound: selected < 0")
@@ -101,7 +102,7 @@ def showMenu(entries, start = 0, selected = 0, align="LEFT", returnInt=False):
     for i in range(0,DISPLAY_HEIGHT):
         cursor=" "
         if start+i < len(entries):
-            debug("writing line"+str(i))
+            debug("writing line"+str(i)+": "+entries[start+i])
             if selected == start+i:
                 debug("line "+str(i) +" is selected, menu item "+str(selected)+" ("+entries[start+i]+")")
                 cursor=">"
@@ -195,36 +196,45 @@ def waitForButton(button, clearDisplay):
         return True
     waitNoButton(clearDisplay)
     return False
+    
+def commandOutput(command):
+    return subprocess.check_output(command, shell=True, text=True)
 
 def menu_internet(start):
 
     debug("menu_internet Stack: "+str(len(inspect.stack())))
 
-    waitNoButton()
-    if start == 0:
-        lcd.print_line(">IP anzeigen",0)
-        lcd.print_line(" Speedtest",1)
-    elif start == 1:
-        lcd.print_line(">Speedtest",0)
-        lcd.print_line(" Zurueck",1)
-    elif start == 2:
-        lcd.print_line(">Zurueck",0)
-        lcd.print_line("",1)
+    #waitNoButton()
+    #if start == 0:
+    #    lcd.print_line(">IP anzeigen",0)
+    #    lcd.print_line(" Speedtest",1)
+    #elif start == 1:
+    #    lcd.print_line(">Speedtest",0)
+    #    lcd.print_line(" Zurueck",1)
+    #elif start == 2:
+    #    lcd.print_line(">Zurueck",0)
+    #    lcd.print_line("",1)
 
-    button = waitGetButton()
-    if button == BUTTON_LEFT and start > 0:
-        menu_internet(start-1)
-    elif button == BUTTON_RIGHT and start < 2:
-        menu_internet(start+1)
-    elif button == BUTTON_RESET:
-        waitNoButton()
-        if start == 0:
-            ip_anzeigen()
-        elif start == 1:
-            routine_speedtest()
-        else:
-            mainMenu(0)
+    #button = waitGetButton()
+    
+    button = showMenu(["IP anzeigen","Speedtest","Zurueck"])
+    #if button == BUTTON_LEFT and start > 0:
+    #    menu_internet(start-1)
+    #elif button == BUTTON_RIGHT and start < 2:
+    #    menu_internet(start+1)
+    #elif button == BUTTON_RESET:
+    #    waitNoButton()
+    #    if start == 0:
+    #        ip_anzeigen()
+    #    elif start == 1:
+    #        routine_speedtest()
+    #    else:
+    #        mainMenu(0)
             # zurueck zum hauptmenu
+    if button == "IP anzeigen":
+        ip_anzeigen()
+    elif button == "Speedtest":
+        routine_speedtest()
     else:
         mainMenu(0)
 
@@ -244,7 +254,7 @@ def ip_anzeigen():
         
 def mainMenu(start):
     debug("mainMenu Stack: "+str(len(inspect.stack())))
-    menu = ["Alles Gute <3","Wikipedia","Nachrichten","Uhr","Internet","Einstellungen"]
+    menu = ["Alles Gute <3","Wikipedia","Nachrichten","Uhr","Internet","MOTD","Einstellungen"]
     ##
     chosen = showMenu(menu)
     startRoutine(chosen,start)
@@ -277,9 +287,17 @@ def startRoutine(routine, start):
         routine_nachrichten()
     elif routine == "Alles Gute <3":
         routine_hilfe()
+    elif routine == "MOTD":
+        routine_motd()
     elif routine == "Einstellungen":
         routine_debug()
     mainMenu(start)
+    
+def routine_motd():
+    URL="https://api.jeff-media.de/haehnchens-geraet/motd.php"
+    f = urlopen(URL)
+    myfile = f.read()
+    showText(str(myfile,"utf-8"))
     
 def remove_non_ascii(text):
 
@@ -308,12 +326,20 @@ def options_wikipedia():
         options_wikipedia()
 
 def routine_debug(start=0):
-    menu = ["Wikipedia","Ueber","Debug","Zurueck","Beenden"]
+    menu = ["Wikipedia","Debug","Zurueck","Beenden"]
     chosen = showMenu(menu,start)
 
     if chosen == "Wikipedia":
         options_wikipedia()
-
+        
+    if chosen == "Debug":
+        LSBCOMMAND="lsb_release -as 2>/dev/null |head -n2|tail -n1"
+        text = textwrap.wrap("Haehnchens Geraet v1.0.13",DISPLAY_WIDTH)
+        text.extend(textwrap.wrap(commandOutput(LSBCOMMAND),DISPLAY_WIDTH))
+        text.extend(textwrap.wrap("Test",DISPLAY_WIDTH))
+        
+        print(text)
+        showTextRaw(text)
     
     elif chosen == "Beenden":
         line(0)
@@ -362,11 +388,12 @@ def routine_nachrichten():
     lcd.print_line("Lade unserioese",1,"CENTER")
     lcd.print_line("Nachrichten ...",2,"CENTER")
     line(3)
-    titles = ["Zurück"]
-    shortTitles = ["Zurück"]
-    descriptions = ["Zurück"]
-    contents = ["Zurück"]
-    finalContents = ["Zurück"]
+    titles = ["Zurueck"]
+    shortTitles = ["Zurueck"]
+    descriptions = ["Zurueck"]
+    contents = ["Zurueck"]
+    finalContents = ["Zurueck"]
+    #finalContents = []
     with urllib.request.urlopen(NEWS_URL + NEWS_API_KEY) as url:
         data = json.loads(url.read().decode())
         for article in data['articles']:
@@ -377,17 +404,20 @@ def routine_nachrichten():
                     titles.append(value)
                     #shortTitles.append(remove_non_ascii(textwrap.shorten(value, width=15, placeholder="...")))
                     shortTitles.append(remove_non_ascii(value))
+                    print("- Title: "+value)
                 elif key == "description":
                     descriptions.append(value)
                 elif key == "content":
                     contents.append(value)
-    for i in range(0,len(titles)):
+    for i in range(1,len(titles)):
         if descriptions[i] != "" and descriptions[i] is not None:
             finalContents.append(descriptions[i])
         elif contents[i] != "" and contents[i] is not None:
             finalContents.append(contents[i])
         else:
-            finalContents[i] = "- Kein Inhalt Hähnchen :( -"
+            finalContents.append("- Kein Inhalt Hähnchen :( -")
+        print("NACHRICHT "+str(i)+": " + titles[i])
+        print("INHALT    "+str(i)+": " + finalContents[i])
     titles.append("Zurück")
     shortTitles.append("Zurück")
     descriptions.append("Zurück")
